@@ -1,0 +1,78 @@
+#import relevant packages
+import zipfile
+import wget
+import os
+from tqdm import tqdm
+import pandas as pd
+
+#create algorithm do download all the zip files from SEC's Financial Statement Dataset
+
+years=[]
+for i in range(14):
+    year_to_add=str(2009+i)
+    years.append(year_to_add)
+
+quarters = ["q1","q2","q3","q4"]
+
+years_quarters=[]
+
+for i in range(len(years)):
+    for w in range(len(quarters)):
+        years_quarters.append(years[i]+quarters[w])
+
+#create a list of zips to download
+zips=[]
+for i in range(len(years_quarters)):
+    zips.append(f'https://www.sec.gov/files/dera/data/financial-statement-data-sets/{years_quarters[i]}.zip')
+    
+for i in range(len(zips)):
+    wget.download(zips[i])
+    
+#create new paths to unzip files
+generic_path = r'ENTER YOUR HARD DRIVE FILE HERE\\' #dont forget to keep the two \\ at the end of the file 
+for i in range(len(zips)):
+    new_path=generic_path+years_quarters[i]
+    if not os.path.exists(new_path):
+        os.makedirs(new_path)
+
+#unzip the files
+for i in range(len(zips)):
+    generic_zip=r"ENTER YOUR HARD DRIVE FILE HERE\\"
+    file_to_zip=generic_zip+years_quarters[i]+".zip"
+    with zipfile.ZipFile(file_to_zip) as zip_ref:
+        generic_path = r'ENTER YOUR HARD DRIVE FILE HERE\\'
+        path_full=generic_path+years_quarters[i]
+        zip_ref.extractall(path_full)
+
+#collect the data
+
+tag_data=[]
+num_data=[]
+sub_data=[]
+pre_data=[]
+
+data=[[],[],[],[]]
+
+data_prefixes=["tag","sub","pre","num"]
+
+#create a list that holds four nested lists to hold the data from each of the four sources
+data=[[],[],[],[]]
+consolidated_data=[[],[],[],[]]
+for i in tqdm(range(len(data))):
+    for w in tqdm(range(len(zips)-2)):
+        generic_path = r'ENTER YOUR HARD DRIVE FILE HERE\\'
+        path_full=generic_path+years_quarters[w]+"\\"+data_prefixes[i]+".txt"
+        data[i].append(pd.read_csv(path_full, sep='\t'))
+        consolidated_data[i]=pd.concat([pd.DataFrame(d) for d in data[i]])
+        
+#save csvs in local hard drive
+for i in tqdm(range(len(consolidated_data))):
+    generic_path = r'ENTER YOUR HARD DRIVE FILE HERE\\'
+    path_full=generic_path+data_prefixes[i]+".csv"
+    pd.DataFrame(consolidated_data[i]).to_csv(path_full)
+
+#save data into specific dataframes
+tag=consolidated_data[0]
+sub=consolidated_data[1]
+pre=consolidated_data[2]
+num=consolidated_data[3]
